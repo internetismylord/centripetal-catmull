@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+	
+	<head>
+	
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="theme-color" content="#222222" />
+		<title>centripetal-catmull</title>
+		<meta name="author" content="Jeph Snchez">
+
+		<meta name="description" content="Dibujar una curva con la librería de javascript Three">
+		<meta name="keywords" content="arte, art, three, catmull, javascript">
+		
+		<link href="https://vitruvioconcert.com/ico/favicon.png" rel="shortcut icon">
+		
+		<style>body {margin: 0; padding: 0; overscroll-behavior: none;}</style>
+
+	</head>
+	
+	<body>
+	
+		<div id="caja"></div>
+
+		<script type="module">
+
+			import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+
+			let caja, camera, scene, renderer;
+			const coordenada = [];
+			const positions = [];
+			const curva = {};
+			let length = 4; 
+			const definicion = 200;
+			
+			init();
+
+			function init() {
+
+				caja = document.getElementById( 'caja' );
+
+				// ESCENA
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x222222 );
+
+				// CAMARA
+				camera = new THREE.PerspectiveCamera( 10, window.innerWidth / window.innerHeight, 5, 10 );
+				camera.position.set( 0.5, 0.5, 8 );
+				scene.add( camera );
+
+				// LUZ FOCO
+				const light = new THREE.SpotLight( 0xffffff, 50 );
+				light.position.set( 2, 5, 2.5 );
+				light.angle = Math.PI/10;
+				light.castShadow = true;
+				light.shadow.mapSize.width = 512;
+				light.shadow.mapSize.height = 512;
+				scene.add( light );
+
+				// LUZ FOCO 2
+				const lightDos = new THREE.SpotLight( 0xffffff, 150 );
+				lightDos.position.set( -5, 0, -5 );
+				scene.add( lightDos );
+
+				// PISO
+				const planeGeometry = new THREE.PlaneGeometry( 10, 10 );
+				planeGeometry.rotateX( - Math.PI / 2.25 );
+				const planeMaterial = new THREE.ShadowMaterial( { color: 0x000000, opacity: 0.5 } );
+				const plane = new THREE.Mesh( planeGeometry, planeMaterial );
+				plane.position.y = - 0.15;
+				plane.receiveShadow = true;
+				scene.add( plane );
+
+				// RENDER 
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				caja.appendChild( renderer.domElement );
+			
+				// CURVA
+ 				for ( let i = 0; i < length; i ++ ) {
+					splineObject();
+				}
+
+				positions.length = 0;
+
+				for ( let i = 0; i < length; i ++ ) {
+					positions.push( coordenada[ i ].position );
+				}
+
+				const geometryLine = new THREE.BufferGeometry();
+				geometryLine.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array( definicion * 3 ), 3 ) );
+
+				let curve = new THREE.CatmullRomCurve3( positions );
+				curve.mesh = new THREE.Line( geometryLine.clone(), new THREE.LineBasicMaterial( {color: 0x111111 } ) );
+				curve.mesh.castShadow = true;
+
+				curva.uniform = curve;
+				
+				for ( const k in curva ) {
+					const spline = curva[ k ];
+					scene.add( spline.mesh );
+				}
+				
+				addPoint();
+
+				renderer.render( scene, camera );
+
+			}
+
+			function splineObject( ) {
+
+				// ESFERAS
+				const geometry = new THREE.SphereGeometry( .025, 12, 12 ); 
+				const material = new THREE.MeshStandardMaterial( { color: 0xa69800, metalness: 0.95, roughness: 0.25 } );
+				const object = new THREE.Mesh( geometry, material );
+
+				object.position.x = Math.random();
+				object.position.y = Math.random();
+				object.castShadow = true;
+				scene.add( object );
+				coordenada.push( object );
+				
+				return object;
+
+			}
+
+			function addPoint() {
+
+				positions.push( splineObject().position );
+	
+				const point = new THREE.Vector3();
+
+				for ( const k in curva ) {
+					const spline = curva[ k ];
+					const splineMesh = spline.mesh;
+					const position = splineMesh.geometry.attributes.position;
+
+					for ( let i = 0; i < definicion; i ++ ) {
+						const t = i / ( definicion - 1 );
+						spline.getPoint( t, point );
+						position.setXYZ( i, point.x, point.y, point.z );
+					}
+
+				}
+
+				renderer.render( scene, camera );
+
+			}
+
+			function reload() {location.reload();}
+
+			setInterval(reload, 4000);
+
+		</script>
+	</body>
+</html>
